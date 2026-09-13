@@ -75,6 +75,7 @@ public class EventService {
 		event.setPrice(request.getPrice());
 		event.setOrganizerEmail(authentication.getName());
 		event.setCapacity(request.getCapacity());
+		event.setAvailableSeats(request.getCapacity());
 
 		Events saved = eventRepository.save(event);
 		return toResponse(saved);
