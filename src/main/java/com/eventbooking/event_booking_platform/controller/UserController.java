@@ -14,7 +14,7 @@ import com.eventbooking.event_booking_platform.model.User;
 import com.eventbooking.event_booking_platform.repository.UserRepository;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 public class UserController {
 	private UserRepository userRepository;
 
@@ -36,7 +36,6 @@ public class UserController {
 	@PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/users")
 	public ResponseEntity<List<UserResponse>> getAllUsers() {
-		System.out.println(">>> ADMIN METHOD REACHED");
 		List<UserResponse> users = userRepository.findAll()
 				.stream()
 				.map(user -> new UserResponse(

@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,13 @@ import com.eventbooking.event_booking_platform.repository.BookingRepository;
 import com.eventbooking.event_booking_platform.repository.EventRepository;
 import com.eventbooking.event_booking_platform.service.BookingService;
 
+/**
+ * Deliberately NOT @Transactional: the two booking threads below need to see the setup Event
+ * row through their own separate connections/transactions, and need real, independently
+ * committed pessimistic locking against Postgres to actually exercise the race. A test-managed
+ * transaction wrapping the whole method would keep the setup insert uncommitted and invisible
+ * to the worker threads. Created rows are cleaned up explicitly in {@link #cleanup()} instead.
+ */
 @SpringBootTest
 public class BookingServiceConcurrencyTest {
 
@@ -26,11 +34,25 @@ public class BookingServiceConcurrencyTest {
 	private BookingService bookingService;
 	@Autowired
 	private EventRepository eventRepository;
+	@Autowired
+	private BookingRepository bookingRepository;
+
+	private Long createdEventId;
+
+	@AfterEach
+	void cleanup() {
+		if (createdEventId != null) {
+			bookingRepository.deleteAll(bookingRepository.findByEventId(createdEventId));
+			eventRepository.deleteById(createdEventId);
+			createdEventId = null;
+		}
+	}
 
 	@Test
 	void twoUsersBookingLastSeat_onlyOneShouldSucceed() throws InterruptedException {
 		Events event = eventRepository
 				.save(new Events(null, "Concert", "desc", "2026-12-01", "Bangalore", 500.0, null, 1, 1));
+		createdEventId = event.getId();
 
 		int numberOfThreads = 2;
 		ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);

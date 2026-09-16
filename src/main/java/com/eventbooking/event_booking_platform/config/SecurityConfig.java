@@ -19,18 +19,24 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import static org.springframework.security.config.Customizer.withDefaults;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-	private JwtAuthenticationFilter jwtAuthenticationFilter;
+	private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-		super();
+	private JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final RateLimitFilter rateLimitFilter;
+
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RateLimitFilter rateLimitFilter) {
+
 		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+		this.rateLimitFilter = rateLimitFilter;
 	}
 
 	@Bean
@@ -42,26 +48,29 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable()).cors(Customizer.withDefaults())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) ->{ 
-						
-						System.out.println(">>> ENTRY POINT HIT for " + request.getRequestURI()
-					    + " | exception=" + authException.getClass().getSimpleName()
-					    + " | message=" + authException.getMessage()
-					    + " | contextAuth=" + SecurityContextHolder.getContext().getAuthentication());
-				
-						response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"); }) )
-				.authorizeHttpRequests(
-						auth -> 
-						auth.requestMatchers("/auth/**").permitAll()
-						.requestMatchers("/error").permitAll()
-						.requestMatchers(HttpMethod.GET, "/events/**").authenticated()
-						.requestMatchers(HttpMethod.POST, "/events").hasAnyRole("ORGANIZER", "ADMIN")
-						.requestMatchers(HttpMethod.PUT, "/events/**").hasAnyRole("ORGANIZER", "ADMIN")
-						.requestMatchers(HttpMethod.DELETE, "/events/**").hasAnyRole("ORGANIZER", "ADMIN")
-						.requestMatchers(HttpMethod.POST, "/bookings/**").hasRole("USER")
-						.anyRequest().authenticated())
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+				.headers(headers -> headers.frameOptions(frame -> frame.deny()).contentTypeOptions(withDefaults())
+						.httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+
+				).exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+
+					log.debug("Unauthenticated access to {}: {}", request.getRequestURI(), authException.getMessage());
+
+					response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+				}))
+				.authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/health").permitAll()
+						.requestMatchers("/actuator/**").hasRole("ADMIN")
+
+						.requestMatchers("/api/v1/auth/**").permitAll()
+
+						.requestMatchers("/error").permitAll().requestMatchers(HttpMethod.GET, "/api/v1/events/**")
+						.authenticated().requestMatchers(HttpMethod.POST, "/api/v1/events")
+						.hasAnyRole("ORGANIZER", "ADMIN").requestMatchers(HttpMethod.PUT, "/api/v1/events/**")
+						.hasAnyRole("ORGANIZER", "ADMIN").requestMatchers(HttpMethod.DELETE, "/api/v1/events/**")
+						.hasAnyRole("ORGANIZER", "ADMIN").requestMatchers(HttpMethod.POST, "/api/v1/bookings/**")
+						.hasRole("USER").anyRequest().authenticated())
+				.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
 
@@ -78,17 +87,16 @@ public class SecurityConfig {
 		return source;
 
 	}
-	
+
 	@Bean
 	public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilterRegistration(
-	        JwtAuthenticationFilter filter) {
+			JwtAuthenticationFilter filter) {
 
-	    FilterRegistrationBean<JwtAuthenticationFilter> registration =
-	            new FilterRegistrationBean<>(filter);
+		FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
 
-	    registration.setEnabled(false);
+		registration.setEnabled(false);
 
-	    return registration;
+		return registration;
 	}
 
 }

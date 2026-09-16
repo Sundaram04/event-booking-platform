@@ -14,7 +14,7 @@ import com.eventbooking.event_booking_platform.dto.RegisterRequest;
 import com.eventbooking.event_booking_platform.service.AuthService;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 	private AuthService authService;
 

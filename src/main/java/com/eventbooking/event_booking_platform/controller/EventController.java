@@ -28,8 +28,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:5174")
 @RestController
+@RequestMapping("/api/v1/events")
 public class EventController {
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "price", "date", "location",
@@ -41,7 +41,7 @@ public class EventController {
 		this.eventService = eventService;
 	}
 
-	@GetMapping("/events")
+	@GetMapping
 	public PageResponse<EventResponse> getAllEvents(@RequestParam(required = false) String location,
 			@RequestParam(required = false) String keyword, @RequestParam(required = false) Double minPrice,
 			@RequestParam(required = false) Double maxPrice, @RequestParam(defaultValue = "0") int page,
@@ -63,12 +63,12 @@ public class EventController {
 		
 	}
 
-	@GetMapping("/events/{id}")
+	@GetMapping("/{id}")
 	public ResponseEntity<EventResponse> getEventById(@PathVariable Long id) {
 		return ResponseEntity.ok(eventService.getEventById(id));
 	}
 
-	@PostMapping("/events")
+	@PostMapping
 	public ResponseEntity<EventResponse> createEvent(@Valid @RequestBody EventRequest request,
 			Authentication authentication) {
 		EventResponse created = eventService.createEvent(request, authentication);
@@ -76,14 +76,14 @@ public class EventController {
 
 	}
 
-	@PutMapping("/events/{id}")
+	@PutMapping("/{id}")
 	public ResponseEntity<EventResponse> updateEvent(@PathVariable Long id, @Valid @RequestBody EventRequest request,
 			Authentication authentication) {
 		EventResponse updated = eventService.updateEvent(id, request, authentication);
 		return ResponseEntity.ok(updated);
 	}
 
-	@DeleteMapping("/events/{id}")
+	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
 		eventService.deleteEvent(id);
 		return ResponseEntity.noContent().build();

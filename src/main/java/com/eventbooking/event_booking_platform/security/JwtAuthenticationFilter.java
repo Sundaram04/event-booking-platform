@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,6 +21,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter{
+	private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
 	private JwtService jwtService;
 
 	public JwtAuthenticationFilter(JwtService jwtService) {
@@ -41,24 +45,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
 		
 		String token = authHeader.substring(7);
 
-		System.out.println(">>> JWT FILTER: " + request.getRequestURI());
-
 		boolean valid = jwtService.isTokenValid(token);
-
-		System.out.println(">>> TOKEN VALID: " + valid);
 
 		if (valid) {
 
 		    String email = jwtService.extractEmail(token);
 		    String role = jwtService.extractRole(token);
 
-		    System.out.println(">>> EMAIL: " + email);
-		    System.out.println(">>> ROLE: " + role);
-
 		    List<GrantedAuthority> authorities =
 		            List.of(new SimpleGrantedAuthority("ROLE_" + role));
-
-		    System.out.println(">>> AUTHORITIES: " + authorities);
 
 		    UsernamePasswordAuthenticationToken authToken =
 		            new UsernamePasswordAuthenticationToken(
@@ -69,10 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
 
 		    SecurityContextHolder.getContext().setAuthentication(authToken);
 
-		    System.out.println(
-				    ">>> BEFORE CHAIN AUTH: " +
-				    SecurityContextHolder.getContext().getAuthentication()
-				);
+		    log.debug("Authenticated {} via JWT for {}", email, request.getRequestURI());
 		}
 		
 		

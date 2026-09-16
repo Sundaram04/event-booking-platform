@@ -65,7 +65,7 @@ class EventControllerSecurityTest {
     void createEvent_shouldReturn403_whenRoleIsUser() throws Exception {
 
         mockMvc.perform(
-                post("/events")
+                post("/api/v1/events")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(validEventRequestJson())
             )
@@ -80,7 +80,7 @@ class EventControllerSecurityTest {
                 .thenReturn(new EventResponse());
 
         mockMvc.perform(
-                post("/events")
+                post("/api/v1/events")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(validEventRequestJson())
             )

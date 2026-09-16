@@ -43,7 +43,7 @@ public class EventControllerTest {
 		response.setLocation("Mumbai");
 		when(eventService.getEventById(1L)).thenReturn(response);
 		
-		mockMvc.perform(get("/events/1"))
+		mockMvc.perform(get("/api/v1/events/1"))
 		.andExpect(status().isOk())
 		.andExpect(jsonPath("$.title").value("Music Fest"))
 		.andExpect(jsonPath("$.location").value("Mumbai"));	
@@ -61,7 +61,7 @@ public class EventControllerTest {
 				"capacity":100
 				}
 				"""; 
-		mockMvc.perform(post("/events")
+		mockMvc.perform(post("/api/v1/events")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(invalidRequestJson))
 		.andExpect(status().isBadRequest())
@@ -72,7 +72,7 @@ public class EventControllerTest {
 	void getEventById_shouldReturn404_whenEventDoesNotExist() throws Exception {
 		when(eventService.getEventById(999L)).thenThrow(new ResourceNotFoundException("Event not found with id 999"));
 		
-		mockMvc.perform(get("/events/999"))
+		mockMvc.perform(get("/api/v1/events/999"))
 		.andExpect(status().isNotFound())
 		.andExpect(jsonPath("$.message").value("Event not found with id 999"));
 	}

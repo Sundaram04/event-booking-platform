@@ -10,6 +10,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,7 +61,7 @@ class EventBookingPlatformIntegrationTest {
 				}
 				""";
 
-		MvcResult result = mockMvc.perform(post("/events").contentType(MediaType.APPLICATION_JSON).content(requestJson))
+		MvcResult result = mockMvc.perform(post("/api/v1/events").contentType(MediaType.APPLICATION_JSON).content(requestJson))
 				.andExpect(status().isCreated()).andExpect(jsonPath("$.title").value("Tech Conference")).andReturn();
 		
 		String responseJson = result.getResponse().getContentAsString();
@@ -68,7 +71,7 @@ class EventBookingPlatformIntegrationTest {
 		Number eventIdNumber = JsonPath.read(responseJson, "$.id");
 		long eventId = eventIdNumber.longValue();
 		
-		mockMvc.perform(get("/events/" + eventId))
+		mockMvc.perform(get("/api/v1/events/" + eventId))
 		
 		.andExpect(status().isOk())
 		.andExpect(jsonPath("$.title").value("Tech Conference"));
@@ -77,9 +80,24 @@ class EventBookingPlatformIntegrationTest {
 				.count();
 
 		assertEquals(1, count);
-		
-		
 
+
+
+	}
+
+	@Test
+	@WithMockUser(roles = "USER")
+	void getAllEvents_keywordSearch_shouldReturnOnlyMatchingTitles() throws Exception {
+
+		eventRepository.save(new Events(null, "Tech Conference", "Annual dev meetup", "2026-12-01", "Bengaluru", 0,
+				"organizer@test.com", 250, 250));
+		eventRepository.save(new Events(null, "Cooking Workshop", "Learn to cook", "2026-12-05", "Mumbai", 0,
+				"organizer@test.com", 30, 30));
+
+		mockMvc.perform(get("/api/v1/events").param("keyword", "conf"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1))))
+				.andExpect(jsonPath("$.content[*].title", everyItem(containsStringIgnoringCase("conf"))));
 	}
 
 }

@@ -13,7 +13,7 @@ public class EventSpecification {
 	}
 	
 	public static Specification<Events> titleContains(String keyword) {
-		return (root, query, cb) -> keyword == null ? null : cb.equal(cb.lower(root.get("title")), "%" + keyword.toLowerCase() + "%");
+		return (root, query, cb) -> keyword == null ? null : cb.like(cb.lower(root.get("title")), "%" + keyword.toLowerCase() + "%");
 	}
 	
 	public static Specification<Events> priceBetween(Double minPrice, Double maxPrice) {
