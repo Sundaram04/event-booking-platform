@@ -19,9 +19,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.eventbooking.event_booking_platform.EventResponse;
-import com.eventbooking.event_booking_platform.EventService;
 import com.eventbooking.event_booking_platform.config.SecurityConfig;
 import com.eventbooking.event_booking_platform.security.JwtService;
+import com.eventbooking.event_booking_platform.service.EventService;
 
 
 @WebMvcTest(EventController.class)

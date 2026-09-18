@@ -35,6 +35,7 @@ import com.eventbooking.event_booking_platform.exception.EventNotEditableExcepti
 import com.eventbooking.event_booking_platform.exception.ResourceNotFoundException;
 import com.eventbooking.event_booking_platform.model.Events;
 import com.eventbooking.event_booking_platform.repository.EventRepository;
+import com.eventbooking.event_booking_platform.service.EventService;
 
 @ExtendWith(MockitoExtension.class)
 public class EventServiceTest {

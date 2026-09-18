@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.eventbooking.event_booking_platform.EventRequest;
 import com.eventbooking.event_booking_platform.EventResponse;
-import com.eventbooking.event_booking_platform.EventService;
 import com.eventbooking.event_booking_platform.dto.PageResponse;
 import com.eventbooking.event_booking_platform.model.Events;
+import com.eventbooking.event_booking_platform.service.EventService;
 
 import jakarta.validation.Valid;
 

@@ -1,5 +1,6 @@
-package com.eventbooking.event_booking_platform;
+package com.eventbooking.event_booking_platform.service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -9,10 +10,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import com.eventbooking.event_booking_platform.EventRequest;
+import com.eventbooking.event_booking_platform.EventResponse;
 import com.eventbooking.event_booking_platform.dto.PageResponse;
 import com.eventbooking.event_booking_platform.exception.EventNotEditableException;
 import com.eventbooking.event_booking_platform.exception.ResourceNotFoundException;
@@ -25,8 +29,15 @@ public class EventService {
 	public final Logger log = LoggerFactory.getLogger(EventService.class);
 	public final EventRepository eventRepository; // final
 
-	public EventService(EventRepository eventRepository) {
+	// Redis Configuration
+	private static final String CACHE_KEY_PREFIX = "event:";
+	private static final Duration CACHE_TTL = Duration.ofMinutes(10);
+	private static RedisTemplate<String, Object> redisTemplate;
+
+	public EventService(EventRepository eventRepository, RedisTemplate<String, Object> redisTemplate) {
+
 		this.eventRepository = eventRepository;
+		this.redisTemplate = redisTemplate;
 	}
 
 	private EventResponse toResponse(Events event) {
@@ -52,8 +63,24 @@ public class EventService {
 
 	}
 
+	// Implementing Cache
 	public EventResponse getEventById(Long id) {
 		log.debug("Fetching event with id={}", id);
+
+		// Creating Redis Cache Key
+		String cacheKey = CACHE_KEY_PREFIX + id;
+
+		// checking Redis cache first
+		EventResponse cached = (EventResponse) redisTemplate.opsForValue().get(cacheKey);
+
+		// Cache Hit
+		if (cached != null) {
+			log.debug("Cache HIT for event id={}", id);
+			return cached;
+		}
+
+		// Cache MISS
+		log.debug("Cache MISS for event id={}", id);
 
 		Events event = eventRepository.findById(id).orElseThrow(() -> {
 			log.warn("Event not found for id={}", id);
@@ -62,7 +89,10 @@ public class EventService {
 		});
 		log.info("Event fetched successfully: id={}, title={}", event.getId(), event.getTitle());
 
+		EventResponse response = toResponse(event);
+		redisTemplate.opsForValue().set(cacheKey, response, CACHE_TTL);
 		return toResponse(event);
+
 	}
 
 	public EventResponse createEvent(EventRequest request, Authentication authentication) {
@@ -85,8 +115,7 @@ public class EventService {
 	public EventResponse updateEvent(Long id, EventRequest request, Authentication authentication) {
 		Events event = eventRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Event not found with id " + id));
-//		Events event = existing.get();
-//		
+
 		boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
 		if (!isAdmin && !authentication.getName().equals(event.getOrganizerEmail())) {
@@ -99,7 +128,6 @@ public class EventService {
 		if (eventDate.isBefore(LocalDate.now())) {
 
 			throw new EventNotEditableException("Cannot update event id " + id + " — it has already started");
-//			new RuntimeException("TESTING UNEXPECTED EXCEPTION")
 		}
 
 		event.setTitle(request.getTitle());
@@ -109,6 +137,9 @@ public class EventService {
 		event.setPrice(request.getPrice());
 		event.setCapacity(request.getCapacity());
 		Events updated = eventRepository.save(event);
+
+		// Invalidate stale cached copy
+		redisTemplate.delete(CACHE_KEY_PREFIX + id);
 		return toResponse(updated);
 	}
 

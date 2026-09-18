@@ -12,9 +12,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.eventbooking.event_booking_platform.EventResponse;
-import com.eventbooking.event_booking_platform.EventService;
 import com.eventbooking.event_booking_platform.exception.ResourceNotFoundException;
 import com.eventbooking.event_booking_platform.security.JwtService;
+import com.eventbooking.event_booking_platform.service.EventService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
