@@ -27,6 +27,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -45,6 +47,12 @@ public class EventServiceTest {
 
 	@Mock
 	private Authentication authentication;
+	
+	@Mock 
+	private RedisTemplate<String, Object> redisTemplate;
+	
+	@Mock
+	private ValueOperations<String, Object> valueOps;
 
 	@InjectMocks
 	private EventService eventService;
@@ -106,6 +114,30 @@ public class EventServiceTest {
 		verify(eventRepository, times(1)).findById(999L);
 
 	}
+	
+	@Test 
+	void getEventById_shouldHitCache_whenEventExistsInCache() {
+		// Arrange
+		EventResponse cachedResponse = new EventResponse(
+				10L,
+				"Cached Event",
+				"Cached Description",
+				"2026-12-01",
+				"Bangalore",
+				500.0,
+				100
+				);
+		when(redisTemplate.opsForValue()).thenReturn(valueOps);
+		when(valueOps.get("event:10")).thenReturn(cachedResponse);
+		
+		//act
+		EventResponse result = eventService.getEventById(10L);
+		
+		//assert
+		assertThat(result).isEqualTo(cachedResponse);
+		verify(eventRepository, never()).findById(any());
+		
+	}
 
 	@Test
 	void updateEvent_shouldThrowEventNotEditableException_whenEventDateHasPassed() {
@@ -132,6 +164,8 @@ public class EventServiceTest {
 
 		verify(eventRepository, never()).save(any(Events.class));
 	}
+	
+	
 
 	@Test
 	void getAllEvents_returnsRequestedPageSize() {

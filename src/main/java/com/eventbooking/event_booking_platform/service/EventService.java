@@ -149,6 +149,7 @@ public class EventService {
 		}
 
 		eventRepository.deleteById(id);
+		redisTemplate.delete(CACHE_KEY_PREFIX + id);
 	}
 
 }

@@ -1,6 +1,9 @@
 package com.eventbooking.event_booking_platform.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.kafka.core.KafkaTemplate;
+
+import com.eventbooking.event_booking_platform.dto.BookingCreatedEvent;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.eventbooking.event_booking_platform.dto.BookingResponse;
@@ -24,34 +27,38 @@ public class BookingService {
 	private final BookingRepository bookingRepository;
 	private final EventRepository eventRepository;
 
-	public BookingService(BookingRepository bookingRepository, EventRepository eventRepository) {
+	private final KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate;
+
+	public BookingService(BookingRepository bookingRepository, EventRepository eventRepository,
+			KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate) {
 		super();
 		this.bookingRepository = bookingRepository;
 		this.eventRepository = eventRepository;
+		this.kafkaTemplate = kafkaTemplate;
 	}
-	
+
 	private BookingResponse toResponse(Booking booking) {
-		return new BookingResponse(booking.getId(), booking.getEvent().getId(), booking.getUserEmail(), booking.getSeatsBooked(), booking.getStatus().toString(), booking.getBookedAt());
+		return new BookingResponse(booking.getId(), booking.getEvent().getId(), booking.getUserEmail(),
+				booking.getSeatsBooked(), booking.getStatus().toString(), booking.getBookedAt());
 	}
-	
 
 	@Transactional
 	public BookingResponse createBooking(Long eventId, String userEmail, int seatsRequested) {
-		Events event = eventRepository.findByIdForUpdate(eventId)
+		Events eventEntity = eventRepository.findByIdForUpdate(eventId)
 				.orElseThrow(() -> new ResourceNotFoundException("Event not Found: " + eventId));
 
-		if (event.getAvailableSeats() < seatsRequested) {
+		if (eventEntity.getAvailableSeats() < seatsRequested) {
 			log.warn("Booking Rejected - eventId={}, requested={}, available={}", eventId, seatsRequested,
-					event.getAvailableSeats());
+					eventEntity.getAvailableSeats());
 
-			throw new InsufficientSeatsException("Only " + event.getAvailableSeats() + "seats left");
+			throw new InsufficientSeatsException("Only " + eventEntity.getAvailableSeats() + "seats left");
 		}
 
-		event.setAvailableSeats(event.getAvailableSeats() - seatsRequested);
-		eventRepository.save(event);
+		eventEntity.setAvailableSeats(eventEntity.getAvailableSeats() - seatsRequested);
+		eventRepository.save(eventEntity);
 
 		Booking booking = new Booking();
-		booking.setEvent(event);
+		booking.setEvent(eventEntity);
 		booking.setUserEmail(userEmail);
 		booking.setSeatsBooked(seatsRequested);
 		booking.setStatus(BookingStatus.CONFIRMED);
@@ -60,6 +67,11 @@ public class BookingService {
 		Booking saved = bookingRepository.save(booking);
 		log.info("Booking Confirmed - bookingId={}, eventId={}, user={}, seats={}", saved.getId(), eventId, userEmail,
 				seatsRequested);
+
+		BookingCreatedEvent bookingCreatedEvent = new BookingCreatedEvent(saved.getId(), eventId, userEmail,
+				seatsRequested, saved.getBookedAt());
+
+		kafkaTemplate.send("booking-created", saved.getId().toString(), bookingCreatedEvent);
 		return toResponse(saved);
 
 	}
