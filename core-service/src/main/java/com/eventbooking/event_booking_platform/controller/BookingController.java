@@ -43,6 +43,7 @@ public class BookingController {
 	public ResponseEntity<?> book(@PathVariable Long eventId, @RequestHeader("Idempotency-Key") String idempotencyKey,
 			@Valid @RequestBody BookingRequest request, Authentication authentication) {
 		String userEmail = authentication.getName();
+		Long userId = (Long) authentication.getDetails();
 		String requestJson = objectMapper.writeValueAsString(request);
 		String requestHash = DigestUtils.sha256Hex(eventId + ":" + requestJson);
 
@@ -63,7 +64,7 @@ public class BookingController {
 
 		BookingResponse response;
 		try {
-			response = bookingService.createBooking(eventId, userEmail, request.getSeats());
+			response = bookingService.createBooking(eventId, userId, userEmail, request.getSeats());
 		} catch (RuntimeException ex) {
 			idempotencyService.release(idempotencyKey);
 			throw ex;

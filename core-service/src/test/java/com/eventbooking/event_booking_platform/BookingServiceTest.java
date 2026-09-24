@@ -20,7 +20,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import com.eventbooking.event_booking_platform.repository.BookingRepository;
 import com.eventbooking.event_booking_platform.repository.EventRepository;
 import com.eventbooking.event_booking_platform.service.BookingService;
+import com.eventbooking.event_booking_platform.client.UserServiceClient;
 import com.eventbooking.event_booking_platform.dto.BookingCreatedEvent;
+import com.eventbooking.event_booking_platform.dto.UserSummaryResponse;
 import com.eventbooking.event_booking_platform.entity.Booking;
 import com.eventbooking.event_booking_platform.entity.BookingStatus;
 import com.eventbooking.event_booking_platform.model.Events;
@@ -28,15 +30,18 @@ import com.eventbooking.event_booking_platform.model.Events;
 
 @ExtendWith(MockitoExtension.class)
 public class BookingServiceTest {
-	@Mock 
+	@Mock
 	private BookingRepository bookingRepository;
-	
+
 	@Mock
 	private EventRepository eventRepository;
-	
+
+	@Mock
+	private UserServiceClient userServiceClient;
+
 	@Mock
 	private KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate;
-	
+
 	@InjectMocks
 	private BookingService bookingService;
 	
@@ -45,6 +50,7 @@ public class BookingServiceTest {
 		
 		// test data
 		 Long eventId = 10L;
+	        Long userId = 5L;
 	        String userEmail = "test@gmail.com";
 	        int seatsRequested = 2;
 
@@ -59,7 +65,9 @@ public class BookingServiceTest {
 	        event.setAvailableSeats(10);
 	        
 	        when(eventRepository.findByIdForUpdate(eventId)).thenReturn(Optional.of(event));
-	        
+
+	        when(userServiceClient.getUser(userId)).thenReturn(new UserSummaryResponse(userId, userEmail, true));
+
 	        Booking savedBooking = new Booking();
 	        
 	        savedBooking.setId(bookingId);
@@ -71,7 +79,7 @@ public class BookingServiceTest {
 	        
 	        when(bookingRepository.save(any(Booking.class))).thenReturn(savedBooking);
 	        
-	        bookingService.createBooking(eventId, userEmail, seatsRequested);
+	        bookingService.createBooking(eventId, userId, userEmail, seatsRequested);
 	        
 	        ArgumentCaptor<BookingCreatedEvent> captor =
 	                ArgumentCaptor.forClass(BookingCreatedEvent.class);

@@ -3,15 +3,17 @@ package com.eventbooking.event_booking_platform.service;
 import org.springframework.stereotype.Service;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import com.eventbooking.event_booking_platform.client.UserServiceClient;
 import com.eventbooking.event_booking_platform.dto.BookingCreatedEvent;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.eventbooking.event_booking_platform.dto.BookingResponse;
+import com.eventbooking.event_booking_platform.dto.UserSummaryResponse;
 import com.eventbooking.event_booking_platform.entity.Booking;
 import com.eventbooking.event_booking_platform.entity.BookingStatus;
 import com.eventbooking.event_booking_platform.exception.ResourceNotFoundException;
 import com.eventbooking.event_booking_platform.exception.InsufficientSeatsException;
-
+import com.eventbooking.event_booking_platform.exception.InvalidBookingException;
 import com.eventbooking.event_booking_platform.model.Events;
 import com.eventbooking.event_booking_platform.repository.BookingRepository;
 import com.eventbooking.event_booking_platform.repository.EventRepository;
@@ -26,14 +28,19 @@ public class BookingService {
 
 	private final BookingRepository bookingRepository;
 	private final EventRepository eventRepository;
+	private final UserServiceClient userServiceClient;
 
 	private final KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate;
 
+	
+	
+
 	public BookingService(BookingRepository bookingRepository, EventRepository eventRepository,
-			KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate) {
+			UserServiceClient userServiceClient, KafkaTemplate<String, BookingCreatedEvent> kafkaTemplate) {
 		super();
 		this.bookingRepository = bookingRepository;
 		this.eventRepository = eventRepository;
+		this.userServiceClient = userServiceClient;
 		this.kafkaTemplate = kafkaTemplate;
 	}
 
@@ -43,7 +50,14 @@ public class BookingService {
 	}
 
 	@Transactional
-	public BookingResponse createBooking(Long eventId, String userEmail, int seatsRequested) {
+	public BookingResponse createBooking(Long eventId, Long userId, String userEmail, int seatsRequested) {
+		
+		UserSummaryResponse user = userServiceClient.getUser(userId);
+		
+		if (!user.isActive()) {
+	        throw new InvalidBookingException("User account is not active");
+	    }
+		
 		Events eventEntity = eventRepository.findByIdForUpdate(eventId)
 				.orElseThrow(() -> new ResourceNotFoundException("Event not Found: " + eventId));
 

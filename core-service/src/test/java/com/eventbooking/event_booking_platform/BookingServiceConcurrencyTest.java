@@ -66,7 +66,7 @@ public class BookingServiceConcurrencyTest {
 			readyLatch.countDown();
 			try {
 				startLatch.await();
-				bookingService.createBooking(event.getId(), "user@test.com", 1);
+				bookingService.createBooking(event.getId(), 6L, "user@test.com", 1);
 				results.add(true);
 			} catch (InsufficientSeatsException e) {
 				results.add(false);

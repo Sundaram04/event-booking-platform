@@ -1,55 +1,55 @@
 services:
-    postgres:
-        image: postgres:16
-        container_name: eventbooking-postgres
-
-        environment:
-            POSTGRES_DB: event_booking_db
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: ${DB_PASSWORD:-your_password_here}
-
-        ports:
-            - "5432:5432"
-
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 5s
-            timeout: 5s
-            retries: 5
 
     redis:
         image: redis:7-alpine
         ports:
             - "6379:6379"
 
-    backend:
+    core-service:
         build: .
-        container_name: eventbooking-backend
-
-        depends_on:
-            postgres:
-                condition: service_healthy
+        container_name: eventbooking-core-service
 
         environment:
             SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/event_booking_db
             SPRING_DATASOURCE_USERNAME: postgres
             SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-your_password_here}
+            USER_SERVICE_URL: http://user-service:8081
+            REDIS_HOST: redis
+            KAFKA_BOOTSTRAP: kafka:9092
 
         ports:
-            - "8080:8080"
+            - "8083:8083"
+
+        networks:
+            - default
+            - backend_default
+
+    user-service:
+        build: ../user-service
+        container_name: eventbooking-user-service
+
+        environment:
+            SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
+            SPRING_DATASOURCE_USERNAME: postgres
+            SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-your_password_here}
+        ports:
+            - "8081:8081"
+        networks:
+            - backend_default
+
+
 
     kafka:
         image: apache/kafka:3.7.0
         ports:
             - "9092:9092"
+            - "9094:9094"
         environment:
             KAFKA_NODE_ID: 1
             KAFKA_PROCESS_ROLES: broker,controller
-            KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+            KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:9094,CONTROLLER://:9093
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
             KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
             KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
             KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -58,5 +58,19 @@ services:
             KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
             KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
+    api-gateway:
+         build: ../api-gateway
+         ports:
+          - "8080:8080"
+         depends_on:
+          - user-service
+          - core-service
+         networks:
+          - default
+          - backend_default
+
 volumes:
     postgres_data:
+networks:
+    backend_default:
+         external: true

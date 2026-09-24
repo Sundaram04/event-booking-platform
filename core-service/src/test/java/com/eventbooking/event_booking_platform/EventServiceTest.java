@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.data.domain.PageImpl;
 import java.util.ArrayList;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -90,6 +89,7 @@ public class EventServiceTest {
 	@Test
 	void getEventById_shouldReturnEvent_whenEventExists() {
 		// ARRANGE
+		when(redisTemplate.opsForValue()).thenReturn(valueOps);
 		when(eventRepository.findById(1L)).thenReturn(Optional.of(sampleEvent));
 
 		// ACT
@@ -104,6 +104,7 @@ public class EventServiceTest {
 	@Test
 	void getEventById_shouldThrowResourceNotFoundException_whenEventDoesNotExists() {
 		// ARRANGE
+		when(redisTemplate.opsForValue()).thenReturn(valueOps);
 		when(eventRepository.findById(999L)).thenReturn(Optional.empty());
 
 		// ACT+ASSERT
