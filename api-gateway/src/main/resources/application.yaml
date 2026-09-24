@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: user-service-route
+              uri: http://user-service:8081
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - RewritePath=/api/v1/users/(?<segment>.*), /internal/users/${segment}
+
+            - id: core-service-route
+              uri: http://core-service:8083
+              predicates:
+                - Path=/api/v1/events/**,/api/v1/bookings/**
