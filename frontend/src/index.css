@@ -1,44 +1,105 @@
+:root {
+  --bg: #14110f;
+  --surface: #1e1a16;
+  --surface-hover: #262019;
+  --border: rgba(245, 239, 230, 0.12);
+  --border-strong: rgba(245, 239, 230, 0.28);
+  --text-primary: #f5efe6;
+  --text-secondary: #a69c8e;
+  --text-muted: #756b5e;
+  --accent: #d9793d;
+  --accent-hover: #c86a2f;
+  --accent-2: #c9a050;
+  --success: #6e9b6b;
+  --warning: #d9a544;
+  --error: #c1544a;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  color: #1a1a1a;
-  background-color: #fafafa;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background-color: var(--bg);
 }
 
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background-color: #22314a;
-  color: #fff;
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
 }
 
-.navbar-brand {
-  font-weight: bold;
-  font-size: 1.2rem;
+p {
+  margin: 0;
 }
 
-.navbar-links {
-  display: flex;
-  gap: 1.5rem;
+a {
+  color: inherit;
 }
 
-.navbar-links a {
-  color: #fff;
-  text-decoration: none;
-}
-
-.navbar-links a:hover {
-  text-decoration: underline;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .page {
   max-width: 700px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 4rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
